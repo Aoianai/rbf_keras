@@ -1,7 +1,18 @@
+"""
+Radial Basis Function Layers for Keras.
+Petra Vidnerová. 
+RBF-Keras: an RBF Layer for Keras Library. 2019. 
+Available at: https://github.com/PetraVidnerova/rbf_keras
+
+Updated to work with Keras3 by Felix Andrade May
+"""
+
 from keras import backend as K
+import keras as k
 from tensorflow.keras.layers import Layer
 from keras.initializers import RandomUniform, Initializer, Constant
 import numpy as np
+import pandas as pd
 
 
 class InitCentersRandom(Initializer):
@@ -17,21 +28,18 @@ class InitCentersRandom(Initializer):
         self.X = X
 
     def __call__(self, shape, dtype=None):
-	assert shape[1] == self.X.shape[1]
-  	idx = np.random.randint(self.X.shape[0], size=shape[0])
-
-	# type checking to access elements of data correctly
-  	if type(self.X) == np.ndarray:
-    		return self.X[idx, :]
-  	elif type(self.X) == pd.core.frame.DataFrame:
-    		return self.X.iloc[idx, :]
+        assert(shape[1] == self.X.shape[1])
+        idx = np.random.randint(self.X.shape[0], size=shape[0])
+        # type checking to access elements of data correctly
+        if type(self.X) == np.ndarray:
+                return self.X[idx, :]
+        elif type(self.X) == pd.core.frame.DataFrame:
+                return self.X.iloc[idx, :]
 
 
 class RBFLayer(Layer):
     """ Layer of Gaussian RBF units.
-
     # Example
-
     ```python
         model = Sequential()
         model.add(RBFLayer(10,
@@ -40,8 +48,6 @@ class RBFLayer(Layer):
                            input_shape=(1,)))
         model.add(Dense(1))
     ```
-
-
     # Arguments
         output_dim: number of hidden units (i.e. number of outputs of the
                     layer)
@@ -49,6 +55,7 @@ class RBFLayer(Layer):
         betas: float, initial value for betas
 
     """
+
 
     def __init__(self, output_dim, initializer=None, betas=1.0, **kwargs):
         self.output_dim = output_dim
@@ -59,36 +66,40 @@ class RBFLayer(Layer):
             self.initializer = initializer
         super(RBFLayer, self).__init__(**kwargs)
 
-    def build(self, input_shape):
 
+    def build(self, input_shape):
         self.centers = self.add_weight(name='centers',
                                        shape=(self.output_dim, input_shape[1]),
                                        initializer=self.initializer,
-                                       trainable=True)
+                                       trainable=True
+                                       )
         self.betas = self.add_weight(name='betas',
                                      shape=(self.output_dim,),
                                      initializer=Constant(
                                          value=self.init_betas),
                                      # initializer='ones',
-                                     trainable=True)
+                                     trainable=True
+                                     )
 
         super(RBFLayer, self).build(input_shape)
 
-    def call(self, x):
 
-        C = K.expand_dims(self.centers)
-        H = K.transpose(C-K.transpose(x))
-        return K.exp(-self.betas * K.sum(H**2, axis=1))
+    def call(self, x):
+        C = k.ops.expand_dims(self.centers, 1)
+        H = k.ops.transpose(C-k.ops.transpose(x))
+        return k.ops.exp(-self.betas * k.ops.sum(H**2, axis=1))
 
         # C = self.centers[np.newaxis, :, :]
         # X = x[:, np.newaxis, :]
 
-        # diffnorm = K.sum((C-X)**2, axis=-1)
-        # ret = K.exp( - self.betas * diffnorm)
+        # diffnorm = k.ops.sum((C-X)**2, axis=-1)
+        # ret = k.ops.exp( - self.betas * diffnorm)
         # return ret
+
 
     def compute_output_shape(self, input_shape):
         return (input_shape[0], self.output_dim)
+
 
     def get_config(self):
         # have to define get_config to be able to use model_from_json
