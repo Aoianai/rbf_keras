@@ -1,6 +1,8 @@
 # rbf_keras
 *Author: Petra Vidnerová, The Czech Academy of Sciences, Institute of Computer Science*
 
+- updated to work with Keras3
+
 
 RBF layer for [Keras](https://keras.io/)
 
